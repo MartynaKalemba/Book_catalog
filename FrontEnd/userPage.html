@@ -24,10 +24,11 @@
                 >
                 <img
                   id="profile-pic"
-                  src=""
+                  src="profile.jpg"
                   alt="Profile Picture"
                   class="img-thumbnail"
-                  width="200"
+                  width="50"
+                  height="50"
                 />
               </div>
               <div class="mb-3">
@@ -60,15 +61,26 @@
             <div class="card-body">
               <ul id="book-list" class="list-group">
                 <!-- Books will be dynamically added here -->
+                <!-- <ul id="bookList" class="list-group"></ul> -->
               </ul>
             </div>
           </div>
         </div>
       </div>
-      <div class="row mt-3">
+      <div class="row">
         <div class="col-md-12">
-          <!-- Button to Add Book -->
-          <button id="add-book-btn" class="btn btn-primary">Add Book</button>
+          <!-- Label to Add Book -->
+          <label for="bookSearch">Book Search:</label>
+          <input
+            type="text"
+            id="bookSearch"
+            placeholder="Enter book title or author"
+          />
+        </div>
+        <div class="col-md-12">
+          <!-- Button to Search Books -->
+          <button id="searchButton" class="btn btn-primary">Search</button>
+          <div id="searchResults"></div>
         </div>
       </div>
     </div>
@@ -80,35 +92,172 @@
     <!-- Custom JavaScript -->
     <script>
       // Add your custom JavaScript code here
-      // For example, handling the "Add Book" button click event and updating the book list dynamically.
-      $(document).ready(function () {
-        let bookCounter = 0;
 
-        $("#add-book-btn").on("click", function () {
-          bookCounter++;
-          const bookName = `Book ${bookCounter}`;
-          const bookScore = Math.floor(Math.random() * 5) + 1; // Generate a random score between 1 and 5.
+      function searchBooks() {
+        const searchTerm = bookSearch.value;
+        const url = `https://openlibrary.org/search.json?q=${searchTerm}`;
 
-          const bookItem = `<li class="list-group-item">
-                                    <div class="d-flex">
-                                        <div class="me-3">
-                                            <img src="book-cover.jpg" alt="Book Cover" width="100" height="150">
-                                        </div>
-                                        <div class="flex-grow-1">
-                                            <h5>${bookName}</h5>
-                                            <p>Our Score: ${bookScore}</p>
-                                        </div>
-                                    </div>
-                                </li>`;
+        fetch(url)
+          .then((response) => response.json())
+          .then((data) => {
+            processBookData(data);
+            displayResults(data);
+          })
+          .catch((error) => {
+            console.error("Error fetching data:", error);
+          });
+      }
 
-          $("#book-list").append(bookItem);
-          $("#books-read").text(bookCounter);
-          const totalScore =
-            parseFloat($("#average-score").text()) * (bookCounter - 1);
-          const averageScore = (totalScore + bookScore) / bookCounter;
-          $("#average-score").text(averageScore.toFixed(2));
+      function processBookData(data) {
+        if (data.docs && data.docs.length > 0) {
+          // Assuming you want information about the first result
+          const book = data.docs[0];
+
+          const title = book.title;
+          const author = book.author_name
+            ? book.author_name.join(", ")
+            : "Unknown Author";
+          const coverUrl = `https://covers.openlibrary.org/b/id/${book.cover_i}-L.jpg`;
+
+          console.log("Title:", title);
+          console.log("Author:", author);
+          console.log("Cover URL:", coverUrl);
+
+          // Now you can use the coverUrl to display the book cover in your web page.
+        } else {
+          console.log("Book not found");
+        }
+      }
+
+      function displayResults(data) {
+        const resultsDiv = document.getElementById("searchResults");
+        resultsDiv.innerHTML = "";
+
+        data.docs.forEach((book) => {
+          const title = book.title;
+          const coverUrl = `https://covers.openlibrary.org/b/id/${book.cover_i}-S.jpg`;
+
+          // Create a Bootstrap card to display each book
+          const card = document.createElement("div");
+          card.classList.add("card", "mb-3");
+
+          // Create the card body
+          const cardBody = document.createElement("div");
+          cardBody.classList.add("card-body");
+
+          // Create the book cover image
+          const coverImage = document.createElement("img");
+          coverImage.src = coverUrl;
+          //coverImage.classList.add("card-img-top", "img-fluid");
+
+          // Create the card title
+          const cardTitle = document.createElement("h5");
+          cardTitle.classList.add("card-title");
+          cardTitle.textContent = title;
+
+          // Create the "Add" button
+          const addButton = document.createElement("button");
+          addButton.textContent = "Add";
+          addButton.classList.add("btn", "btn-secondary");
+          addButton.addEventListener("click", () => addToBookList(book));
+
+          // Append elements to the card body
+          cardBody.appendChild(coverImage);
+          cardBody.appendChild(cardTitle);
+          cardBody.appendChild(addButton);
+
+          // Append the card body to the card
+          card.appendChild(cardBody);
+
+          // Append the card to the results div
+          resultsDiv.appendChild(card);
         });
-      });
+      }
+
+      // Function to add a book to the user's list
+      function addToBookList(book) {
+        const bookName = book.title;
+        const bookScore = Math.floor(Math.random() * 5) + 1; // Generate a random score between 1 and 5.
+        const coverUrl = `https://covers.openlibrary.org/b/id/${book.cover_i}-L.jpg`;
+        const coverImage = document.createElement("img");
+        coverImage.src = coverUrl;
+
+        const bookItem = `<li class="list-group-item">
+                                      <div class="d-flex">
+                                          <div class="me-2">
+                                              <img src=${coverUrl} alt="Book Cover" width="100" height="150">
+                                          </div>
+                                          <div class="flex-grow-1">
+                                              <h5>${bookName}</h5>
+                                              <p>Our Score: ${bookScore}</p>
+                                          </div>
+                                      </div>
+                                  </li>`;
+
+        const bookList = document.getElementById("bookList");
+        fetch("/addBook", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            title: bookName,
+            description: "Description goes here", // You can customize this
+            coverURL: coverUrl,
+            rate: bookScore,
+          }),
+        })
+          .then((response) => {
+            if (response.ok) {
+              console.log("Book added successfully to the database!");
+            } else {
+              console.error("Error adding the book to the database.");
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+          });
+        $("#book-list").append(bookItem);
+      }
+
+      function fetchBooks() {
+        fetch("/getBooks")
+          .then((response) => response.json())
+          .then((books) => {
+            // Assuming there's an HTML element with the id 'bookList' to display books
+            const bookList = document.getElementById("book-list");
+            bookList.innerHTML = ""; // Clear existing content
+
+            // Loop through the fetched books and create HTML elements to display them
+            books.forEach((book) => {
+              const bookItem = `<li class="list-group-item">
+                    <div class="d-flex">
+                        <div class="me-2">
+                            <img src=${book.coverURL} alt="Book Cover" width="100" height="150">
+                        </div>
+                        <div class="flex-grow-1">
+                            <h5>${book.title}</h5>
+                            <p>Our Score: ${book.rate}</p>
+                        </div>
+                    </div>
+                </li>`;
+
+              // Append each book item to the bookList element
+              bookList.innerHTML += bookItem;
+            });
+          })
+          .catch((error) => {
+            console.error("Error fetching books:", error);
+          });
+      }
+
+      // Call the fetchBooks function when the page loads
+      window.addEventListener("load", fetchBooks);
+
+      // Event listener for the search button
+      document
+        .getElementById("searchButton")
+        .addEventListener("click", searchBooks);
     </script>
   </body>
 </html>

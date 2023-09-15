@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Book Search</title>
+  </head>
+  <body>
+    <h1>Book Search</h1>
+    <input type="text" id="searchInput" placeholder="Enter book title" />
+    <button id="searchButton">Search</button>
+    <div id="searchResults"></div>
+    <h2>My Book List</h2>
+    <ul id="bookList"></ul>
+
+    <script>
+      // Function to fetch book data from OpenLibrary API
+      function searchBooks() {
+        const searchTerm = document.getElementById("searchInput").value;
+        const url = `https://openlibrary.org/search.json?q=${searchTerm}`;
+
+        fetch(url)
+          .then((response) => response.json())
+          .then((data) => {
+            displayResults(data);
+          })
+          .catch((error) => {
+            console.error("Error fetching data:", error);
+          });
+      }
+
+      // Function to display search results
+      function displayResults(data) {
+        const resultsDiv = document.getElementById("searchResults");
+        resultsDiv.innerHTML = "";
+
+        data.docs.forEach((book) => {
+          const title = book.title;
+          const addButton = document.createElement("button");
+          addButton.textContent = "Add";
+          addButton.addEventListener("click", () => addToBookList(title));
+
+          const resultItem = document.createElement("div");
+          resultItem.textContent = title;
+          resultItem.appendChild(addButton);
+          resultsDiv.appendChild(resultItem);
+        });
+      }
+
+      // Function to add a book to the user's list
+      function addToBookList(title) {
+        const bookList = document.getElementById("bookList");
+        const listItem = document.createElement("li");
+        listItem.textContent = title;
+        bookList.appendChild(listItem);
+      }
+
+      // Event listener for the search button
+      document
+        .getElementById("searchButton")
+        .addEventListener("click", searchBooks);
+    </script>
+  </body>
+</html>
